@@ -226,6 +226,30 @@ details.hist summary{ cursor:pointer; display:flex; justify-content:space-betwee
 details.hist .meta{ color:var(--muted); font-size:13px; }
 details.hist ul{ margin:9px 0 2px; padding-left:18px; color:var(--muted); font-size:14px; }
 
+/* Modo tablet (quiosque) */
+html[data-quiosque="on"] body{ background:var(--bg); }
+html[data-quiosque="on"] .top, html[data-quiosque="on"] nav, html[data-quiosque="on"] .note, html[data-quiosque="on"] .recepcao{ display:none; }
+html[data-quiosque="on"] main{ padding:0; }
+html[data-quiosque="on"] .stage{ grid-template-columns:1fr; gap:0; }
+html[data-quiosque="on"] .tablet{ border-radius:0; padding:0; box-shadow:none; background:var(--surface); }
+html[data-quiosque="on"] .device-label{ display:none; }
+html[data-quiosque="on"] .screen{ border-radius:0; min-height:100vh; }
+html[data-quiosque="on"] .shead{ padding:22px 26px 20px; }
+html[data-quiosque="on"] .shead h2{ font-size:34px; }
+html[data-quiosque="on"] .avatar{ width:46px; height:46px; font-size:22px; border-radius:14px; }
+html[data-quiosque="on"] .contador{ font-size:26px; padding:9px 20px; }
+html[data-quiosque="on"] .sbody{ padding:22px 26px 28px; }
+html[data-quiosque="on"] .status, html[data-quiosque="on"] .btn.small{ font-size:17px; padding:10px 18px; }
+html[data-quiosque="on"] .card{ padding:18px 20px; border-radius:16px; }
+html[data-quiosque="on"] .card strong{ font-size:23px; }
+html[data-quiosque="on"] .card .meta{ font-size:18px; }
+html[data-quiosque="on"] .pill{ font-size:15px; padding:4px 12px; }
+html[data-quiosque="on"] .aviso, html[data-quiosque="on"] .empty{ font-size:18px; padding:16px 18px; }
+html[data-quiosque="on"] .sairq{ display:inline-flex; }
+.sairq{ display:none; position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:25; align-items:center;
+  background:var(--surface2); border:1px solid var(--line); opacity:.85; }
+.sairq:hover{ opacity:1; }
+
 .toast{ position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
   background:linear-gradient(135deg,var(--magenta),var(--accent) 60%,var(--accent2)); color:#fff; padding:12px 20px; border-radius:14px; font-weight:700;
   max-width:calc(100% - 32px); opacity:0; pointer-events:none; transition:opacity .2s; z-index:30; box-shadow:var(--shadow); }
@@ -281,6 +305,7 @@ details.hist ul{ margin:9px 0 2px; padding-left:18px; color:var(--muted); font-s
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="sheetTitulo">
   <div class="sheet" id="sheet"></div>
 </div>
+<button class="btn small sairq" data-action="sairquiosque">Sair do modo tablet</button>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -569,6 +594,7 @@ function renderProfs(){
           ${acima?`<div class="aviso">Acima do recomendado (${ALERTA} alunos). Vale redistribuir ou chamar reforço.</div>`:''}
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px">
             <span class="status ${p.status==='turno'?'':'off'}">${p.status==='turno'?'Em turno':'Em intervalo'}</span>
+            <button class="btn small" data-action="quiosque" data-prof="${p.id}">Modo tablet</button>
             <button class="btn small" data-action="status" data-prof="${p.id}">${p.status==='turno'?'Intervalo':'Voltar ao turno'}</button>
           </div>
           <div class="cards">${cards}</div>
@@ -921,6 +947,14 @@ document.addEventListener('click', e => {
     el.textContent = claro ? 'Modo claro' : 'Modo escuro';
     try { localStorage.setItem('fitmais-tema', document.documentElement.dataset.tema); } catch(err){}
   }
+  else if (act === 'quiosque'){
+    profSel = el.dataset.prof; view = 'prof';
+    document.documentElement.dataset.quiosque = 'on';
+    try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); } catch(err){}
+    render(); window.scrollTo({top:0});
+    toast('Modo tablet ligado. Pressione Esc para sair.');
+  }
+  else if (act === 'sairquiosque') sairQuiosque();
   else if (act === 'simular') simularChegada();
   else if (act === 'reset'){ fecharSheet(); seed(); commit(); toast('Demonstração reiniciada.'); }
 });
@@ -959,7 +993,19 @@ $('#busca').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ const b = $('#resultados [data-action="checkin"]:not([disabled])'); if (b) b.click(); }
 });
 $('#overlay').addEventListener('click', e => { if (e.target.id === 'overlay') fecharSheet(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#overlay').classList.contains('open')) fecharSheet(); });
+function sairQuiosque(){
+  delete document.documentElement.dataset.quiosque;
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch(err){}
+  render();
+}
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.documentElement.dataset.quiosque === 'on') sairQuiosque();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#overlay').classList.contains('open')) fecharSheet();
+  else if (document.documentElement.dataset.quiosque === 'on') sairQuiosque();
+});
 
 /* ---------------- Início ---------------- */
 try { const t = localStorage.getItem('fitmais-tema'); if (t) document.documentElement.dataset.tema = t; } catch(e){}
